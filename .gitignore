@@ -1,0 +1,9 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+
+./node_modules
+
+# Volumes
+volumes/
