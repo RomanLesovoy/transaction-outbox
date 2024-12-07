@@ -20,6 +20,4 @@ CREATE TABLE IF NOT EXISTS outbox_message (
 );
 
 -- Индекс для оптимизации выборки необработанных сообщений
-CREATE INDEX IF NOT EXISTS idx_outbox_unpublished 
-ON outbox_message(published) 
-WHERE NOT published;
+CREATE INDEX IF NOT EXISTS idx_outbox_unpublished ON outbox_message(published) WHERE NOT published;

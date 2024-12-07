@@ -1,6 +1,5 @@
 import { KafkaOptions, Transport } from '@nestjs/microservices';
 import { Partitioners } from 'kafkajs';
-
 import * as dotenv from 'dotenv';
 dotenv.config();
 
@@ -11,7 +10,7 @@ export const kafkaConfig: KafkaOptions = {
   options: {
     client: {
       clientId: process.env.KAFKA_CLIENT_ID || 'balance-service',
-      brokers: [(isLocal ? 'localhost:9092' : process.env.KAFKA_BROKERS) || 'localhost:9092'],
+      brokers: [(isLocal ? 'localhost:9092' : process.env.KAFKA_BROKERS) || 'kafka:9092'],
       retry: {
         initialRetryTime: 1000,
         retries: 8,
@@ -20,7 +19,7 @@ export const kafkaConfig: KafkaOptions = {
       connectionTimeout: 45000,
     },
     consumer: {
-      groupId: process.env.KAFKA_GROUP_ID || 'service-consumer-group',
+      groupId: process.env.KAFKA_GROUP_ID || 'balance-consumer-group',
       allowAutoTopicCreation: true,
       sessionTimeout: 45000,
       heartbeatInterval: 15000,

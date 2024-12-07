@@ -1,24 +1,32 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { Transport } from '@nestjs/microservices';
+import { kafkaConfig } from './kafka.config';
+import { Logger } from '@nestjs/common';
+import * as dotenv from 'dotenv';
+dotenv.config();
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap Balance Service');
   
-  app.connectMicroservice({
-    transport: Transport.KAFKA,
-    options: {
-      client: {
-        brokers: ['localhost:9092'],
-        clientId: 'balance-service',
-      },
-      consumer: {
-        groupId: 'balance-consumer-group',
-      },
-    },
-  });
+  try {
+    const app = await NestFactory.create(AppModule, {
+      logger: ['error', 'warn', 'debug', 'log', 'verbose'],
+    });
 
-  await app.startAllMicroservices();
-  await app.listen(process.env.PORT_BALANCE_SERVICE ?? 3001);
+    app.connectMicroservice(kafkaConfig);
+    await app.startAllMicroservices();
+    
+    const port = process.env.PORT || 3001;
+    await app.listen(port, '0.0.0.0', () => {
+      logger.log(`Application is running on: http://0.0.0.0:${port}`);
+    });
+  } catch (error) {
+    logger.error('Failed to start balance service:', error);
+    throw error;
+  }
 }
-bootstrap();
+
+bootstrap().catch((error) => {
+  console.error('Failed to start balance service:', error);
+  process.exit(1);
+});

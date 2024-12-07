@@ -1,9 +1,9 @@
-import { Injectable, Inject, OnModuleInit, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import { ClientKafka } from '@nestjs/microservices';
 
 @Injectable()
-export class KafkaService implements OnModuleInit {
+export class KafkaService {
   private readonly logger = new Logger(KafkaService.name);
   private isInitialized = false;
   private connectionRetries = 0;
@@ -13,30 +13,30 @@ export class KafkaService implements OnModuleInit {
     @Inject('KAFKA_SERVICE') private readonly kafkaClient: ClientKafka,
   ) {}
 
-  async isConnected() {
-    try {
-      if (!this.isInitialized) {
-        await this.kafkaClient.connect();
-        this.isInitialized = true;
-      }
-      this.logger.log('Kafka connection successful');
-      return true;
-    } catch (error) {
-      this.logger.error('Kafka connection failed:', error);
-      return false;
-    }
-  }
+  // async isConnected() {
+  //   try {
+  //     if (!this.isInitialized) {
+  //       await this.kafkaClient.connect();
+  //       this.isInitialized = true;
+  //     }
+  //     this.logger.log('Kafka connection successful');
+  //     return true;
+  //   } catch (error) {
+  //     this.logger.error('Kafka connection failed:', error);
+  //     return false;
+  //   }
+  // }
 
-  async onModuleInit() {
-    const topics = ['ORDER_CREATED', 'BALANCE_CHECKED', 'DELIVERY_INITIATED'];
+  // async onModuleInit() {
+  //   const topics = []; // TODO: add topics if used send() (request-response pattern)
     
-    topics.forEach(topic => {
-      this.kafkaClient.subscribeToResponseOf(topic);
-      this.logger.log(`Subscribed to topic: ${topic}`);
-    });
+  //   topics.forEach(topic => {
+  //     this.kafkaClient.subscribeToResponseOf(topic);
+  //     this.logger.log(`Subscribed to topic: ${topic}`);
+  //   });
 
-    await this.tryConnect();
-  }
+  //   await this.tryConnect();
+  // }
 
   private async tryConnect() {
     while (this.connectionRetries < this.MAX_RETRIES) {
@@ -75,21 +75,21 @@ export class KafkaService implements OnModuleInit {
     }
   }
 
-  async send(topic: string, message: any) {
-    if (!this.isInitialized) {
-      this.logger.warn('Kafka client not initialized, attempting to connect...');
-      await this.tryConnect();
-    }
+  // async send(topic: string, message: any) {
+  //   if (!this.isInitialized) {
+  //     this.logger.warn('Kafka client not initialized, attempting to connect...');
+  //     await this.tryConnect();
+  //   }
 
-    try {
-      return await firstValueFrom(this.kafkaClient.send(topic, {
-        key: message.id,
-        value: message,
-        timestamp: Date.now(),
-      }));
-    } catch (error) {
-      this.logger.error(`Failed to send message to topic ${topic}:`, error);
-      throw error;
-    }
-  }
+  //   try {
+  //     return await firstValueFrom(this.kafkaClient.send(topic, {
+  //       key: message.id,
+  //       value: message,
+  //       timestamp: Date.now(),
+  //     }));
+  //   } catch (error) {
+  //     this.logger.error(`Failed to send message to topic ${topic}:`, error);
+  //     throw error;
+  //   }
+  // }
 }

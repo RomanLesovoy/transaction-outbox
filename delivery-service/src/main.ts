@@ -1,24 +1,32 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { Transport } from '@nestjs/microservices';
+import { kafkaConfig } from './kafka.config';
+import { Logger } from '@nestjs/common';
+import * as dotenv from 'dotenv';
+dotenv.config();
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap Delivery Service');
   
-  app.connectMicroservice({
-    transport: Transport.KAFKA,
-    options: {
-      client: {
-        brokers: [process.env.KAFKA_BROKERS || 'kafka:9092'],
-        clientId: 'delivery-service',
-      },
-      consumer: {
-        groupId: 'delivery-consumer-group',
-      },
-    },
-  });
+  try {
+    const app = await NestFactory.create(AppModule, {
+      logger: ['error', 'warn', 'debug', 'log', 'verbose'],
+    });
 
-  await app.startAllMicroservices();
-  await app.listen(process.env.PORT_DELIVERY_SERVICE ?? 3002);
+    app.connectMicroservice(kafkaConfig);
+    await app.startAllMicroservices();
+    
+    const port = process.env.PORT || 3002;
+    await app.listen(port, '0.0.0.0', () => {
+      logger.log(`Application is running on: http://0.0.0.0:${port}`);
+    });
+  } catch (error) {
+    logger.error('Failed to start delivery service:', error);
+    throw error;
+  }
 }
-bootstrap();
+
+bootstrap().catch((error) => {
+  console.error('Failed to start delivery service:', error);
+  process.exit(1);
+});

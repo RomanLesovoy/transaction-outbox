@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { databaseConfig } from './typeorm.config';
 import { KafkaModule } from './kafka.module';
 import { RelayModule } from './relay.module';
+import { DeliveryController } from './delivery.controller';
 
 @Module({
   imports: [
@@ -13,7 +14,7 @@ import { RelayModule } from './relay.module';
     KafkaModule,
     RelayModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, DeliveryController],
   providers: [AppService, DeliveryService],
 })
 export class AppModule {}

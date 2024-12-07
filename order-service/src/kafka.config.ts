@@ -1,5 +1,4 @@
-import { KafkaOptions } from "@nestjs/microservices";
-import { Transport } from "@nestjs/microservices";
+import { KafkaOptions, Transport } from "@nestjs/microservices";
 import { Partitioners } from 'kafkajs';
 import * as dotenv from 'dotenv';
 dotenv.config();
@@ -11,7 +10,7 @@ export const kafkaConfig: KafkaOptions = {
   options: {
     client: {
       clientId: process.env.KAFKA_CLIENT_ID || 'order-service',
-      brokers: [(isLocal ? 'localhost:9092' : process.env.KAFKA_BROKERS) || 'localhost:9092'],
+      brokers: [(isLocal ? 'localhost:9092' : process.env.KAFKA_BROKERS) || 'kafka:9092'],
       retry: {
         initialRetryTime: 1000,
         retries: 8,

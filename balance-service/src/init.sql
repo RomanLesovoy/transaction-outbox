@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS balance (
+CREATE TABLE IF NOT EXISTS "balance" (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id VARCHAR(255) NOT NULL,
     amount DECIMAL NOT NULL DEFAULT 0,
@@ -20,5 +20,5 @@ CREATE TABLE IF NOT EXISTS outbox_message (
 );
 
 -- Индексы
-CREATE INDEX idx_balance_user_id ON balance(user_id);
-CREATE INDEX idx_outbox_unpublished ON outbox_message(published) WHERE NOT published;
+CREATE INDEX IF NOT EXISTS idx_balance_user_id ON balance(user_id);
+CREATE INDEX IF NOT EXISTS idx_outbox_unpublished ON outbox_message(published) WHERE NOT published;
