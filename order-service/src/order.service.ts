@@ -14,47 +14,33 @@ export class OrdersService {
   ) {}
 
   async createOrder(createOrderDto: CreateOrderDto) {
-    this.logger.log('try createQueryRunner')
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    this.logger.log('Connected to database');
-    await queryRunner.startTransaction();
-
-    try {
+    return this.dataSource.transaction(async (manager) => {
       // Create order
-      const order = queryRunner.manager.create(Order, {
+      const order = manager.create(Order, {
         amount: createOrderDto.amount,
-        userId: createOrderDto.userId,
+        user_id: createOrderDto.user_id,
         status: 'PENDING',
       });
+      
+      const savedOrder = await manager.save(Order, order);
 
-      const savedOrder = await queryRunner.manager.save(Order, order);
-
-      // Create outbox messages
-      const outboxMessage = queryRunner.manager.create(OutboxMessage, {
-        aggregateType: 'ORDER',
-        aggregateId: savedOrder.id,
+      // Create outbox message
+      const outboxMessage = manager.create(OutboxMessage, {
+        aggregate_type: 'ORDER',
+        aggregate_id: savedOrder.id,
         type: 'BALANCE_CHECK',
         payload: { 
-          orderId: savedOrder.id, 
+          order_id: savedOrder.id, 
           amount: savedOrder.amount,
-          userId: savedOrder.userId,
+          user_id: savedOrder.user_id,
         },
       });
 
-      await queryRunner.manager.save(OutboxMessage, outboxMessage);
-
-      await queryRunner.commitTransaction();
+      await manager.save(OutboxMessage, outboxMessage);
+      
+      this.logger.log(`Transaction completed`);
       return savedOrder;
-    } catch (err) {
-      await queryRunner.rollbackTransaction();
-      if (err.code === '23505') { // Unique key error
-        throw new Error('Order with this ID already exists');
-      }
-      throw new Error(`Failed to create order: ${err.message}`);
-    } finally {
-      await queryRunner.release();
-    }
+    });
   }
 
   async findOne(id: string) {
@@ -62,29 +48,17 @@ export class OrdersService {
   }
 
   async updateOrderStatus(orderId: string, status: string): Promise<Order> {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      const order = await queryRunner.manager.findOne(Order, { 
+    return this.dataSource.transaction(async (manager) => {
+      const order = await manager.findOne(Order, { 
         where: { id: orderId } 
       });
       
       if (!order) {
         throw new Error('Order not found');
       }
-
+  
       order.status = status;
-      await queryRunner.manager.save(order);
-
-      await queryRunner.commitTransaction();
-      return order;
-    } catch (err) {
-      await queryRunner.rollbackTransaction();
-      throw err;
-    } finally {
-      await queryRunner.release();
-    }
+      return manager.save(order);
+    });
   }
 }

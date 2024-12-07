@@ -1,29 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { Transport } from '@nestjs/microservices';
 import { kafkaConfig } from './kafka.config';
 import { Logger } from '@nestjs/common';
-
-// async function bootstrap() {
-//   const app = await NestFactory.create(AppModule);
-  
-//   app.connectMicroservice({
-//     transport: Transport.KAFKA,
-//     options: {
-//       client: {
-//         brokers: ['localhost:9092'],
-//         clientId: 'order-service',
-//       },
-//       consumer: {
-//         groupId: 'order-consumer-group',
-//       },
-//     },
-//   });
-
-//   await app.startAllMicroservices();
-//   await app.listen(process.env.PORT_ORDER_SERVICE ?? 3000);
-// }
-// bootstrap();
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');

@@ -5,12 +5,12 @@ export class Delivery {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
-  orderId: string;
+  @Column({ name: 'order_id' })
+  order_id: string;
 
   @Column()
   status: string;
 
-  @CreateDateColumn()
-  createdAt: Date;
+  @CreateDateColumn({ name: 'created_at' })
+  created_at: Date;
 }

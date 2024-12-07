@@ -5,11 +5,11 @@ export class OutboxMessage {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
-  aggregateType: string;
+  @Column({ name: 'aggregate_type' })
+  aggregate_type: string;
 
-  @Column()
-  aggregateId: string;
+  @Column({ name: 'aggregate_id' })
+  aggregate_id: string;
 
   @Column()
   type: string;
@@ -20,15 +20,15 @@ export class OutboxMessage {
   @Column({ default: false })
   published: boolean;
 
-  @CreateDateColumn()
-  createdAt: Date;
+  @CreateDateColumn({ name: 'created_at' })
+  created_at: Date;
 
   @Column({ default: 0 })
-  retryCount: number;
+  retry_count: number;
 
-  @Column({ nullable: true })
-  publishedAt: Date;
+  @Column({ name: 'published_at', nullable: true })
+  published_at: Date;
 
-  @Column({ nullable: true })
-  lastError: string;
+  @Column({ name: 'last_error', nullable: true })
+  last_error: string;
 }
