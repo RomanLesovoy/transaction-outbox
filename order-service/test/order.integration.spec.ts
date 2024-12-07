@@ -4,6 +4,8 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { KafkaService } from '../src/kafka.service';
 import { DataSource } from 'typeorm';
+import { RelayService } from '../src/relay.service';
+import { OutboxMessage } from '../src/entities/outbox-message.entity';
 
 jest.setTimeout(10000);
 
@@ -11,6 +13,7 @@ describe('Order Integration Tests', () => {
   let app: INestApplication;
   let kafkaService: KafkaService;
   let dataSource: DataSource;
+  let relayService: RelayService;
 
   const mockKafkaService = {
     emit: jest.fn().mockResolvedValue(true),
@@ -29,6 +32,7 @@ describe('Order Integration Tests', () => {
     app = moduleFixture.createNestApplication();
     dataSource = moduleFixture.get<DataSource>(DataSource);
     kafkaService = moduleFixture.get<KafkaService>(KafkaService);
+    relayService = moduleFixture.get<RelayService>(RelayService);
     
     await app.init();
   });
@@ -39,7 +43,6 @@ describe('Order Integration Tests', () => {
 
   describe('POST /orders', () => {
     it('should create order and emit message to Kafka', async () => {
-      // Генерируем уникальный ID для тестового пользователя
       const testUserId = `test-user-${Date.now()}`;
       
       const orderData = {
@@ -60,18 +63,44 @@ describe('Order Integration Tests', () => {
         status: 'PENDING',
       });
 
-      // Ждем некоторое время для обработки сообщения
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Проверяем создание сообщения в outbox
+      const outboxMessage = await dataSource
+        .getRepository(OutboxMessage)
+        .findOne({
+          where: { 
+            aggregate_id: response.body.id,
+            type: 'BALANCE_CHECK'
+          }
+        });
+
+      expect(outboxMessage).toBeDefined();
+      expect(outboxMessage.payload).toMatchObject({
+        order_id: response.body.id,
+        amount: orderData.amount,
+        user_id: orderData.user_id,
+      });
+
+      // Явно вызываем обработку сообщений
+      await relayService.processOutboxMessages();
 
       // Проверяем, что KafkaService.emit был вызван с правильными параметрами
       expect(mockKafkaService.emit).toHaveBeenCalledWith(
         'BALANCE_CHECK',
         expect.objectContaining({
           id: response.body.id,
-          amount: orderData.amount,
-          user_id: orderData.user_id,
+          ...outboxMessage.payload,
         })
       );
+
+      // Проверяем, что сообщение помечено как отправленное
+      const updatedOutboxMessage = await dataSource
+        .getRepository(OutboxMessage)
+        .findOne({
+          where: { id: outboxMessage.id }
+        });
+
+      expect(updatedOutboxMessage.published).toBe(true);
+      expect(updatedOutboxMessage.published_at).toBeDefined();
     });
 
     it('should handle Kafka emission failure', async () => {
@@ -82,13 +111,38 @@ describe('Order Integration Tests', () => {
         user_id: `test-user-${Date.now()}`,
       };
 
-      // Заказ должен создаться даже при ошибке Kafka
       const response = await request(app.getHttpServer())
         .post('/orders')
         .send(orderData)
         .expect(201);
 
       expect(response.body.status).toBe('PENDING');
+
+      // Проверяем создание сообщения в outbox
+      const outboxMessage = await dataSource
+        .getRepository(OutboxMessage)
+        .findOne({
+          where: { 
+            aggregate_id: response.body.id,
+            type: 'BALANCE_CHECK'
+          }
+        });
+
+      expect(outboxMessage).toBeDefined();
+
+      // Явно вызываем обработку сообщений
+      await relayService.processOutboxMessages();
+
+      // Проверяем, что сообщение помечено для повторной попытки
+      const updatedOutboxMessage = await dataSource
+        .getRepository(OutboxMessage)
+        .findOne({
+          where: { id: outboxMessage.id }
+        });
+
+      expect(updatedOutboxMessage.published).toBe(false);
+      expect(updatedOutboxMessage.retry_count).toBe(1);
+      expect(updatedOutboxMessage.last_error).toBe('Kafka error');
     });
   });
 });
