@@ -3,14 +3,12 @@ import { Partitioners } from 'kafkajs';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-const isLocal = process.env.NODE_ENV !== 'production';
-
 export const kafkaConfig: KafkaOptions = {
   transport: Transport.KAFKA,
   options: {
     client: {
       clientId: process.env.KAFKA_CLIENT_ID || 'balance-service',
-      brokers: [(isLocal ? 'localhost:9092' : process.env.KAFKA_BROKERS) || 'kafka:9092'],
+      brokers: [process.env.KAFKA_BROKERS || 'kafka:9092'],
       retry: {
         initialRetryTime: 1000,
         retries: 8,
