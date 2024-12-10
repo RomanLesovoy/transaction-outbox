@@ -18,3 +18,6 @@ CREATE TABLE IF NOT EXISTS outbox_message (
     published_at TIMESTAMP,
     last_error TEXT
 );
+
+-- Индекс для оптимизации выборки необработанных сообщений
+CREATE INDEX IF NOT EXISTS idx_outbox_unpublished ON outbox_message(published) WHERE NOT published;

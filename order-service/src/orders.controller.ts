@@ -48,8 +48,8 @@ export class OrdersController {
         id: order.id,
         amount: order.amount,
         status: order.status,
-        userId: order.userId,
-        createdAt: order.createdAt,
+        user_id: order.user_id,
+        created_at: order.created_at,
       };
     } catch (error) {
       this.logger.error(`Failed to create order: ${error.message}`, error.stack);
@@ -92,7 +92,7 @@ export class OrdersController {
   @MessagePattern('ORDER_COMPLETED')
   async handleOrderCompleted(data: any) {
     try {
-      await this.ordersService.updateOrderStatus(data.orderId, 'COMPLETED');
+      await this.ordersService.updateOrderStatus(data.order_id, 'COMPLETED');
       this.logger.log(`Order completed: ${JSON.stringify(data)}`);
     } catch (error) {
       this.logger.error(`Failed to handle order completed: ${error.message}`, error.stack);

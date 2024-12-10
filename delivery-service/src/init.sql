@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS delivery (
+CREATE TABLE IF NOT EXISTS "delivery" (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     order_id UUID NOT NULL,
     status VARCHAR(50) NOT NULL,
@@ -20,5 +20,5 @@ CREATE TABLE IF NOT EXISTS outbox_message (
 );
 
 -- Индексы
-CREATE INDEX idx_delivery_order_id ON delivery(order_id);
-CREATE INDEX idx_outbox_unpublished ON outbox_message(published) WHERE NOT published;
+CREATE INDEX IF NOT EXISTS idx_delivery_order_id ON delivery(order_id);
+CREATE INDEX IF NOT EXISTS idx_outbox_unpublished ON outbox_message(published) WHERE NOT published;

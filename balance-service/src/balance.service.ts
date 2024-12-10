@@ -1,58 +1,44 @@
-import { Injectable } from '@nestjs/common';
-import { MessagePattern } from '@nestjs/microservices';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
-import { Balance } from './entities/balance.entity';
+import { Injectable, Logger } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { OutboxMessage } from './entities/outbox-message.entity';
 
 @Injectable()
 export class BalanceService {
+  private readonly logger = new Logger(BalanceService.name);
+
   constructor(
-    @InjectRepository(Balance)
-    private balanceRepository: Repository<Balance>,
-    @InjectRepository(OutboxMessage)
-    private outboxRepository: Repository<OutboxMessage>,
     private dataSource: DataSource,
   ) {}
 
-  @MessagePattern('BALANCE_CHECK')
   async processBalanceCheck(data: any) {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
+    return this.dataSource.transaction(async (manager) => {
       // Check and update balance
-      const newBalance = await this.updateBalance(data.orderId, data.amount);
-      const balance = await this.getBalance(data.orderId);
+      await this.updateBalance(data.order_id, data.amount);
+      const balance = await this.getBalance(data.order_id);
       
       // Create message for delivery service
-      const outboxMessage = await queryRunner.manager.create(OutboxMessage, {
-        aggregateType: 'BALANCE',
-        aggregateId: data.orderId,
+      const outboxMessage = manager.create(OutboxMessage, {
+        aggregate_type: 'BALANCE',
+        aggregate_id: data.order_id,
         type: 'DELIVERY_INIT',
-        payload: { orderId: data.orderId },
+        payload: { order_id: data.order_id },
       });
 
-      const savedOutboxMessage = await queryRunner.manager.save(OutboxMessage, outboxMessage);
+      await manager.save(OutboxMessage, outboxMessage);
 
-      await queryRunner.commitTransaction();
+      this.logger.log(`Transaction completed`);
+
       return balance;
-    } catch (err) {
-      await queryRunner.rollbackTransaction();
-      throw err;
-    } finally {
-      await queryRunner.release();
-    }
+    });
   }
 
-  async getBalance(orderId: string) {
+  async getBalance(order_id: string) {
     // Implement balance check logic here
 
     return { balance: 100 }; // Example return value
   }
 
-  async updateBalance(orderId: string, amount: number) {
+  async updateBalance(order_id: string, amount: number) {
     // Implement balance update logic here
   }
 }

@@ -11,9 +11,9 @@ export class Order {
   @Column()
   status: string;
 
-  @Column()
-  userId: string;
+  @Column({ name: 'user_id' })
+  user_id: string;
 
-  @CreateDateColumn()
-  createdAt: Date;
+  @CreateDateColumn({ name: 'created_at' })
+  created_at: Date;
 }

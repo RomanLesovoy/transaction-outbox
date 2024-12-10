@@ -80,7 +80,7 @@ describe('Order Integration Tests', () => {
         user_id: orderData.user_id,
       });
 
-      // Вручную запускаем обработку сообщений
+      // Явно вызываем обработку сообщений
       await relayService.processOutboxMessages();
 
       // Проверяем, что KafkaService.emit был вызван с правильными параметрами
@@ -128,7 +128,9 @@ describe('Order Integration Tests', () => {
           }
         });
 
-      // Вручную запускаем обработку сообщений
+      expect(outboxMessage).toBeDefined();
+
+      // Явно вызываем обработку сообщений
       await relayService.processOutboxMessages();
 
       // Проверяем, что сообщение помечено для повторной попытки

@@ -1,52 +1,39 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
-import { MessagePattern } from '@nestjs/microservices';
+import { Injectable, Logger } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { Delivery } from './entities/delivery.entity';
 import { OutboxMessage } from './/entities/outbox-message.entity';
 
 @Injectable()
 export class DeliveryService {
+  private readonly logger = new Logger(DeliveryService.name);
+
   constructor(
-    @InjectRepository(Delivery)
-    private deliveryRepository: Repository<Delivery>,
-    @InjectRepository(OutboxMessage)
-    private outboxRepository: Repository<OutboxMessage>,
     private dataSource: DataSource,
   ) {}
 
-  @MessagePattern('DELIVERY_INIT')
   async initDelivery(data: any) {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
+    return this.dataSource.transaction(async (manager) => {
       // Create delivery record
-      const delivery = await queryRunner.manager.create(Delivery, {
-        orderId: data.orderId,
+      const delivery = manager.create(Delivery, {
+        order_id: data.order_id,
         status: 'INITIATED',
       });
 
-      const savedDelivery = await queryRunner.manager.save(Delivery, delivery);
+      const savedDelivery = await manager.save(Delivery, delivery);
 
       // Create final message about completion
-      const outboxMessage = await queryRunner.manager.create(OutboxMessage, {
-        aggregateType: 'DELIVERY',
-        aggregateId: data.orderId,
+      const outboxMessage = manager.create(OutboxMessage, {
+        aggregate_type: 'DELIVERY',
+        aggregate_id: data.order_id,
         type: 'ORDER_COMPLETED',
-        payload: { orderId: data.orderId },
+        payload: { order_id: data.order_id },
       });
 
-      await queryRunner.manager.save(OutboxMessage, outboxMessage);
+      await manager.save(OutboxMessage, outboxMessage);
 
-      await queryRunner.commitTransaction();
-      return delivery;
-    } catch (err) {
-      await queryRunner.rollbackTransaction();
-      throw err;
-    } finally {
-      await queryRunner.release();
-    }
+      this.logger.log(`Transaction completed`);
+
+      return savedDelivery;
+    });
   }
 }
