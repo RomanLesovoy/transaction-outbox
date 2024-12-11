@@ -8,7 +8,7 @@ export const kafkaConfig: KafkaOptions = {
   options: {
     client: {
       clientId: process.env.KAFKA_CLIENT_ID || 'order-service',
-      brokers: [process.env.KAFKA_BROKERS || 'kafka:9092'],
+      brokers: ['kafka:9092', 'kafka:29092'],
       retry: {
         initialRetryTime: 1000,
         retries: 8,

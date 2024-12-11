@@ -1,44 +1,7 @@
 #version: '3.8'
+# launch with: after kafka and zookeeper (main docker compose)
 
 services:
-  zookeeper:
-    image: confluentinc/cp-zookeeper:latest
-    ports:
-      - "2181:2181"
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    healthcheck:
-      test: echo srvr | nc localhost 2181 || exit 1
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  kafka:
-    image: confluentinc/cp-kafka:latest
-    depends_on:
-      zookeeper:
-        condition: service_healthy
-    ports:
-      - "${KAFKA_PORT:-9092}:${KAFKA_PORT:-9092}"
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_BROKERS: ${KAFKA_BROKERS}
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    healthcheck:
-      test: 
-        - CMD-SHELL
-        - kafka-topics --bootstrap-server kafka:29092 --list && echo "ruok" | nc zookeeper 2181
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 15s
-
   order-db:
     image: postgres:14-alpine
     ports:
@@ -56,6 +19,9 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - kafka-network
+      - order-network
 
   order-service:
     build: 
@@ -67,16 +33,23 @@ services:
       - NODE_ENV=${NODE_ENV:-development}
       - KAFKA_BROKERS=${KAFKA_BROKERS}
       - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT}
+      - DB_PORT=5432
       - DB_DATABASE=${DB_DATABASE}
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
     depends_on:
-      kafka:
-        condition: service_healthy
       order-db:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - kafka-network
+      - order-network
 
 volumes:
   order-data:
+
+networks:
+  kafka-network:
+    external: true
+  order-network:
+    driver: bridge
