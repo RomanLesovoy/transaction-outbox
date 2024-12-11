@@ -13,7 +13,7 @@ async function bootstrap() {
       logger: ['error', 'warn', 'debug', 'log', 'verbose'],
     });
 
-    app.connectMicroservice(kafkaConfig);
+    app.connectMicroservice(kafkaConfig, { inheritAppConfig: true });
     await app.startAllMicroservices();
     
     const port = process.env.PORT || 3000;
